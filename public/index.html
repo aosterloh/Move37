@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Move 37 - The Art of Go (AlphaGo, Learning Coach, AI vs AI)</title>
+  <link rel="stylesheet" href="style.css?v=1.1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- Top Header Navigation -->
+  <header class="app-header">
+    <div class="brand">
+      <div class="brand-icon"></div>
+      <span class="brand-title">Move 37</span>
+      <span class="brand-badge">Go Experience</span>
+    </div>
+
+    <!-- Mode Selector Tabs -->
+    <nav class="header-center">
+      <button class="mode-tab-btn active" data-mode="learn">
+        <span>🎓</span> Learning Go
+      </button>
+      <button class="mode-tab-btn" data-mode="aivsai">
+        <span>🤖</span> AI vs AI
+      </button>
+      <button class="mode-tab-btn" data-mode="alphago">
+        <span>⚡</span> AlphaGo Relive
+      </button>
+    </nav>
+
+    <!-- Header Actions -->
+    <div class="header-right">
+      <button class="btn-icon" id="btn-theme-toggle" title="Toggle Theme (Light / Dark)">
+        <span id="theme-icon">☀️</span>
+      </button>
+      <button class="btn-icon" id="btn-sound-toggle" title="Mute/Unmute Audio">
+        <span id="sound-icon">🔊</span>
+      </button>
+      <button class="btn-icon" id="btn-demo-guide" title="Googler Demo Guide">
+        <span>📖</span> Demo Guide
+      </button>
+      <button class="btn-icon" id="btn-original-prompt" title="Original Prompt">
+        <span>✨</span> Prompt
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Game Stage & Controls -->
+  <main class="app-main">
+
+    <!-- Dedicated Left 1/4 Full-Screen Coach Panel (Visible in Full Screen Mode) -->
+    <aside id="fullscreen-coach-panel" class="fullscreen-coach-panel" style="display: none;">
+      
+      <!-- Top Sensei Header & Match Stats -->
+      <div class="fs-panel-header">
+        <div class="fs-brand">
+          <div class="brand-icon"></div>
+          <div class="fs-brand-info">
+            <span class="fs-brand-title">Gemini 3.8 Flash Sensei</span>
+            <span class="fs-level-badge" id="fs-level-badge">Lvl 1: Novice (9×9)</span>
+          </div>
+        </div>
+        <div class="fs-stats-pill">
+          <span class="fs-stat-item"><span class="chip-mini black"></span> <span id="fs-black-caps">0 caps</span></span>
+          <span class="fs-stat-sep">•</span>
+          <span class="fs-stat-item"><span class="chip-mini white"></span> <span id="fs-white-caps">0 caps</span></span>
+          <span class="fs-stat-sep">•</span>
+          <span class="fs-move-count" id="fs-move-count">Move 0</span>
+        </div>
+      </div>
+
+      <!-- Card 1: Last Move Evaluation -->
+      <div class="fs-card fs-eval-card" id="fs-eval-card">
+        <div class="fs-card-top">
+          <span class="fs-card-tag">Student Move Analysis</span>
+          <span class="eval-badge badge-solid" id="fs-eval-badge">READY</span>
+        </div>
+        <h4 class="fs-eval-title" id="fs-eval-title">Opening Placement</h4>
+        <p class="fs-eval-explanation" id="fs-eval-explanation">
+          Click any intersection to place your stone. Your Gemini Sensei will evaluate tactical accuracy, shape efficiency, and atari defense.
+        </p>
+      </div>
+
+      <!-- Card 2: Advised Next Move (Lengthy Tactical Analysis & 3 Move Choices) -->
+      <div class="fs-card fs-advice-card">
+        <div class="fs-card-top">
+          <span class="fs-card-tag whattodo"><span>👉</span> Advised Next Move</span>
+          <span class="fs-coord-pill" id="fs-rec-coord">E5</span>
+        </div>
+        <p class="fs-card-body" id="fs-what-to-do">
+          Stake out the corner star points or Tengen early. Securing corners takes fewer stones to enclose solid territory while giving your stones wide breathing room to expand across the board.
+        </p>
+
+        <!-- Top 3 Numbered Move Candidates (Novice & Medium Modes) -->
+        <div class="fs-candidates-container" id="fs-candidates-container" style="display: none;">
+          <div class="fs-candidates-header">
+            <span>🎯 3 Best Move Choices</span>
+            <span class="fs-cand-subtitle">(Click stone on board or card below)</span>
+          </div>
+          <div class="fs-candidate-list" id="fs-candidate-list">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 3: What To Watch Out For (Tactical Threats & Dangers) -->
+      <div class="fs-card fs-watchout-card">
+        <div class="fs-card-top">
+          <span class="fs-card-tag watchout"><span>⚠️</span> What To Watch Out For</span>
+        </div>
+        <p class="fs-card-body" id="fs-watch-out">
+          Beware of leaving stones on the first or second lines with only two liberties. White will look to clamp or cut any isolated stone that lacks connecting diagonal support.
+        </p>
+      </div>
+
+      <!-- Card 4: What NOT To Do (Amateur Pitfalls) -->
+      <div class="fs-card fs-whatnot-card">
+        <div class="fs-card-top">
+          <span class="fs-card-tag whatnot"><span>🚫</span> What NOT To Do</span>
+        </div>
+        <p class="fs-card-body" id="fs-what-not">
+          Do not attach directly to White's stones without a clear tactical reason—contact moves strengthen the defender and rob you of prospective liberties.
+        </p>
+      </div>
+
+      <!-- Card 5: Grandmaster Positional Harmony -->
+      <div class="fs-card fs-summary-card" id="fs-summary-card">
+        <div class="fs-card-top">
+          <span class="fs-card-tag summary"><span>⚖️</span> Positional Balance</span>
+        </div>
+        <p class="fs-card-body" id="fs-pos-summary">
+          The opening phase sets the tone for the entire match. Maintain balance between third-line territorial profit and fourth-line central influence.
+        </p>
+      </div>
+
+      <!-- Exit Full Screen Banner & Button -->
+      <div class="fs-exit-banner">
+        <div class="fs-exit-text">
+          <span>💡 Press <kbd>Esc</kbd> or click outside board to return</span>
+        </div>
+        <button id="btn-fs-exit-panel" class="btn-fs-exit-pill" title="Return to default menu">
+          <span>✕</span> Exit Full Screen
+        </button>
+      </div>
+
+    </aside>
+
+    <!-- Right 3/4 Column in Full Screen mode (Left Column in default mode): Go Board Stage -->
+    <section class="board-stage">
+
+      <!-- Floating Full-Screen Top Pill Hint -->
+      <div class="fs-top-pill" id="fs-top-pill" style="display: none;">
+        <span>⛶ Full Screen Mode • Press <kbd>Esc</kbd> or click outside board to return</span>
+        <button id="btn-fs-top-exit" class="btn-top-exit-icon" title="Return to default menu">✕</button>
+      </div>
+
+      <!-- 3D Perspective Board Container -->
+      <div class="board-perspective-wrapper">
+        <div class="board-viewport" id="board-viewport">
+          <canvas id="board-canvas" class="canvas-layer"></canvas>
+          <canvas id="particle-canvas" class="canvas-layer"></canvas>
+
+          <!-- Floating AI Thinking Indicator (pulsing top-right of board during AI turn) -->
+          <div id="ai-thinking-indicator" class="ai-thinking-indicator" style="display: none;">
+            <span class="thinking-dot"></span>
+            <span class="thinking-text">AI thinking...</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Board Footer Stats Bar (Visible in standard layout) -->
+      <div class="board-footer">
+        <div class="player-score-card">
+          <div class="stone-chip black"></div>
+          <div class="score-details">
+            <span class="player-name" id="label-black-player">Black (You)</span>
+            <span class="player-caps" id="label-black-caps">Captures: 0</span>
+          </div>
+        </div>
+
+        <div class="game-turn-indicator">
+          <div class="turn-badge" id="turn-badge">Black's Turn</div>
+          <span style="font-size:0.75rem; color:var(--text-muted);" id="move-count-badge">Move 0</span>
+        </div>
+
+        <div class="player-score-card">
+          <div class="score-details" style="text-align: right;">
+            <span class="player-name" id="label-white-player">White (AI)</span>
+            <span class="player-caps" id="label-white-caps">Captures: 0</span>
+          </div>
+          <div class="stone-chip white"></div>
+        </div>
+      </div>
+
+      <!-- Subtle Full Screen Toggle Below Board -->
+      <div class="board-sub-controls">
+        <button id="btn-fullscreen-toggle" class="btn-subtle-fullscreen" title="Full Screen Focus (Left 1/4 Coach, Right 3/4 Board)">
+          <span>⛶</span> Full Screen
+        </button>
+      </div>
+
+    </section>
+
+    <!-- Right Column: Mode Panels & Interactive Controls -->
+    <aside class="sidebar-panel">
+
+      <!-- Top Action Bar with Mode Indicator & Red Restart Button -->
+      <div class="sidebar-top-bar">
+        <div class="sidebar-mode-badge" id="sidebar-mode-badge">
+          <span>🎓</span> <span id="sidebar-mode-text">Learning Go</span>
+        </div>
+        <button class="btn-restart-red" id="btn-top-restart" title="Reset game and clear board">
+          <span>🔄</span> Restart Game
+        </button>
+      </div>
+
+      <!-- Compact Board & View Settings Card -->
+      <div class="card board-controls-card">
+        <!-- Quick View Toggles Grid (4 across) -->
+        <div class="board-toggles-grid">
+          <button class="view-btn" id="btn-tilt-toggle" title="Toggle 2D / 2.5D Tilt Perspective">
+            <span>📐</span> <span id="tilt-label">2.5D Tilt</span>
+          </button>
+          <button class="view-btn" id="btn-heatmap-toggle" title="Toggle Territory & Influence Heatmap">
+            <span>🌡️</span> Influence
+          </button>
+          <button class="view-btn active" id="btn-coords-toggle" title="Toggle Grid Coordinates">
+            <span>🔤</span> Coords
+          </button>
+          <button class="view-btn" id="btn-numbers-toggle" title="Toggle Move Numbers">
+            <span>🔢</span> Move #
+          </button>
+        </div>
+
+        <!-- Customization Selectors (3 across) -->
+        <div class="board-selectors-row">
+          <div class="selector-col">
+            <label class="compact-label" for="select-board-size">Grid Size</label>
+            <select class="view-select custom-select-full" id="select-board-size" title="Board Grid Size" style="font-weight:700; color:var(--accent-gold); border-color:var(--accent-gold);">
+              <option value="19">19×19 Grid</option>
+              <option value="13">13×13 Grid</option>
+              <option value="9" selected>9×9 Grid</option>
+            </select>
+          </div>
+          <div class="selector-col">
+            <label class="compact-label" for="select-board-theme">Material</label>
+            <select class="view-select custom-select-full" id="select-board-theme" title="Board Material">
+              <option value="kaya" selected>Classic Kaya</option>
+              <option value="obsidian">Obsidian</option>
+              <option value="cyberpunk">Cyberpunk</option>
+            </select>
+          </div>
+          <div class="selector-col">
+            <label class="compact-label" for="select-vfx-style">Capture VFX</label>
+            <select class="view-select custom-select-full" id="select-vfx-style" title="Capture Animation VFX">
+              <option value="random" selected>Random</option>
+              <option value="dissolve">Dissolve</option>
+              <option value="explode">Explode</option>
+              <option value="flames">Flames</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODE 1: LEARNING GO -->
+      <div class="mode-panel active" id="panel-learn">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title"><span>🎓</span> Coach & Training Levels</span>
+            <div style="display:flex; gap:6px; align-items:center;">
+              <span class="brand-badge" style="background:rgba(56,189,248,0.15); color:var(--accent-cyan); border-color:var(--accent-cyan); font-size:0.65rem;">Gemini 3.8 Flash</span>
+              <button class="btn-icon" id="btn-toggle-hint-box" style="padding:4px 8px; font-size:0.75rem;">
+                <span>👁️</span> Hints
+              </button>
+            </div>
+          </div>
+
+          <!-- Voice Coach & Announcer Controls -->
+          <div class="voice-coach-bar">
+            <div class="voice-coach-top">
+              <span class="voice-coach-label"><span>✨</span> Gemini Live Sensei:</span>
+              <div class="voice-actions">
+                <button class="voice-toggle-btn active" id="btn-toggle-voice" title="Toggle Spoken Commentary">
+                  <span id="voice-toggle-icon">🔊</span> <span id="voice-toggle-label">Voice ON</span>
+                </button>
+                <button class="voice-test-btn" id="btn-test-voice" title="Listen to Gemini Live Voice Sample">
+                  <span>▶</span> Test
+                </button>
+              </div>
+            </div>
+            <select class="view-select custom-select-full" id="select-coach-voice" title="Select Gemini Live Neural Voice Persona" style="margin-top:4px; font-weight:600;">
+              <option value="Aoede" selected>✨ 👩 Sensei Aoede (Warm &amp; Encouraging)</option>
+              <option value="Kore">✨ 👩 Master Kore (Serene &amp; Philosophical)</option>
+              <option value="Puck">✨ 👨 Sensei Puck (Energetic &amp; Friendly)</option>
+              <option value="Charon">✨ 👨 Grandmaster Charon (Deep &amp; Authoritative)</option>
+              <option value="Fenrir">✨ 👨 Master Fenrir (Direct &amp; Tactical)</option>
+            </select>
+          </div>
+
+          <!-- 3 Difficulty Levels: Novice (9x9), Medium (13x13), Advance (19x19) -->
+          <div class="level-selector">
+            <button class="level-btn active" data-level="1" title="Novice: 9×9 Board">Lvl 1: Novice (9×9)</button>
+            <button class="level-btn" data-level="2" title="Medium: 13×13 Board">Lvl 2: Medium (13×13)</button>
+            <button class="level-btn" data-level="3" title="Advance: 19×19 Board">Lvl 3: Advance (19×19)</button>
+          </div>
+
+          <!-- Dynamic Tactical Advice Box -->
+          <div class="hint-box" id="hint-box-container">
+            <div class="hint-box-header">
+              <span style="font-weight:700; font-size:0.85rem;" id="hint-level-title">Beginner Fundamentals</span>
+              <span class="hint-badge" id="hint-status-badge">Gemini 3.8 Flash</span>
+            </div>
+
+            <div class="hint-section">
+              <span class="hint-label whattodo"><span>👉</span> Advised Next Move:</span>
+              <p class="hint-text" id="hint-what-to-do">Stake out star points (4-4) in the corners: D4, Q4, D16, Q16.</p>
+            </div>
+
+            <div class="hint-section">
+              <span class="hint-label watchout"><span>⚠️</span> What To Watch Out For:</span>
+              <p class="hint-text" id="hint-watch-out">Avoid random stones in center; corners take fewest stones to secure territory!</p>
+            </div>
+
+            <div class="hint-section">
+              <span class="hint-label whatnot"><span>🚫</span> What NOT To Do:</span>
+              <p class="hint-text" id="hint-what-not">Do not play directly adjacent attachments without a concrete tactical plan.</p>
+            </div>
+          </div>
+
+          <!-- Real-Time Candidate Move Feedback -->
+          <div class="candidate-evaluation-box" id="eval-box">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span style="font-size:0.75rem; text-transform:uppercase; color:var(--text-muted); font-weight:700;">Last Move Feedback</span>
+              <span class="eval-badge badge-solid" id="eval-badge">READY</span>
+            </div>
+            <strong id="eval-title" style="font-size:0.9rem;">Click any intersection to play</strong>
+            <p id="eval-explanation" style="font-size:0.8rem; color:var(--text-secondary);">Your Gemini 3.8 Flash coach will evaluate each move for tactical accuracy, shape efficiency, and atari defense.</p>
+          </div>
+
+          <!-- Controls -->
+          <div class="action-buttons-row" style="margin-top: 10px;">
+            <button class="btn-action" id="btn-learn-undo"><span>↩️</span> Undo</button>
+            <button class="btn-action" id="btn-learn-pass"><span>🏳️</span> Pass</button>
+            <button class="btn-action" id="btn-learn-gemini-ask" style="grid-column: span 2; border-color:var(--accent-cyan); color:var(--accent-cyan);"><span>✨</span> Ask Gemini 3.8 Flash Coach</button>
+            <button class="btn-action" id="btn-learn-reset" style="grid-column: span 2;"><span>🔄</span> Clear Board</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODE 2: AI VS AI -->
+      <div class="mode-panel" id="panel-aivsai">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title"><span>🤖</span> Autonomous Self-Play</span>
+            <span class="hint-badge" id="aivsai-status">Paused</span>
+          </div>
+
+          <!-- AI vs AI Engine Selector: Grandmaster Library vs Live Gemini -->
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px; margin-bottom:10px;">
+            <button class="level-btn active" id="btn-engine-pro" style="padding:6px;">🚀 AlphaGo Zero Self-Play</button>
+            <button class="level-btn" id="btn-engine-gemini" style="padding:6px;">⚡ Gemini 3.8 Flash Live</button>
+          </div>
+
+          <!-- Match Choice for Pro Self-Play -->
+          <div id="pro-game-select-container" style="margin-bottom:8px;">
+            <select class="select-custom" id="select-pro-game" style="width:100%; font-size:0.8rem;">
+              <option value="0">AlphaGo Zero vs. AlphaGo Zero (Game #17)</option>
+              <option value="1">Honinbo Title Match (Cho Chikun vs Takemiya)</option>
+            </select>
+          </div>
+
+          <!-- Playback Controls -->
+          <div class="playback-controls">
+            <button class="btn-ctrl" id="btn-ai-step-back" title="Step Back">⏮️</button>
+            <button class="btn-ctrl primary" id="btn-ai-play-pause" title="Play / Pause">▶️</button>
+            <button class="btn-ctrl" id="btn-ai-step-forward" title="Step Forward">⏭️</button>
+            <button class="btn-ctrl" id="btn-ai-reset" title="Reset">🔄</button>
+          </div>
+
+          <!-- Speed Slider -->
+          <div class="speed-control">
+            <div class="slider-row">
+              <span style="font-size:0.8rem; font-weight:700;">Speed:</span>
+              <input type="range" class="speed-slider" id="ai-speed-slider" min="150" max="2500" step="50" value="800">
+              <span style="font-size:0.8rem; font-family:var(--font-mono); color:var(--accent-cyan);" id="speed-label">800ms</span>
+            </div>
+          </div>
+
+          <!-- Move by Move Explainer Commentary -->
+          <div class="commentary-ticker">
+            <div class="commentary-header">
+              <span id="ai-commentary-engine-label">Neural Strategy Analysis</span>
+              <button class="btn-icon" id="btn-toggle-ai-explainer" style="padding:2px 6px; font-size:0.7rem;">Toggle</button>
+            </div>
+            <p class="commentary-body" id="ai-commentary-text">
+              Press Play to watch authentic 9-dan Go without unnatural crawling. Click "⚡ Gemini 3.8 Flash Live" to let Gemini 3.8 Flash play move-by-move.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODE 3: ALPHAGO RELIVE SERIES -->
+      <div class="mode-panel" id="panel-alphago">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title"><span>⚡</span> Relive AlphaGo History</span>
+            <span class="hint-badge" style="background:rgba(212,175,55,0.2); color:var(--accent-gold); border-color:var(--accent-gold);">Legendary</span>
+          </div>
+
+          <!-- Year & Match Selectors -->
+          <div class="match-selector-grid">
+            <select class="select-custom" id="select-alphago-year">
+              <option value="2016" selected>2016: vs Lee Sedol</option>
+              <option value="2017">2017: vs Ke Jie</option>
+            </select>
+            <select class="select-custom" id="select-alphago-game">
+              <!-- Dynamically populated -->
+            </select>
+          </div>
+
+          <!-- Match Metadata Card -->
+          <div style="background:var(--bg-tertiary); padding:12px; border-radius:10px; font-size:0.82rem; line-height:1.5;">
+            <div style="font-weight:700; color:var(--accent-gold);" id="alphago-match-title">Game 2: The Shoulder Hit on the 5th Line</div>
+            <div style="color:var(--text-muted);" id="alphago-match-meta">March 10, 2016 | AlphaGo (Black) vs Lee Sedol 9p (White)</div>
+          </div>
+
+          <!-- SPOTLIGHT ACTIONS: MOVE 37 & MOVE 78 -->
+          <div class="spotlight-actions">
+            <button class="btn-spotlight" id="btn-jump-move-37">
+              <span>🌟</span> Jump to Move 37 (The 5th-Line Shoulder Hit)
+            </button>
+            <button class="btn-spotlight-secondary" id="btn-jump-move-78">
+              <span>✨</span> Jump to Move 78 (Lee Sedol's Divine Move)
+            </button>
+          </div>
+
+          <!-- Scrub Slider and Playback -->
+          <div class="playback-controls" style="margin: 4px 0;">
+            <button class="btn-ctrl" id="btn-alpha-start" title="First Move">⏮️</button>
+            <button class="btn-ctrl" id="btn-alpha-prev" title="Previous Move">◀️</button>
+            <button class="btn-ctrl primary" id="btn-alpha-play" title="Play / Pause">▶️</button>
+            <button class="btn-ctrl" id="btn-alpha-next" title="Next Move">▶️</button>
+            <button class="btn-ctrl" id="btn-alpha-end" title="Last Move">⏭️</button>
+          </div>
+
+          <div class="timeline-scrubber">
+            <span style="font-size:0.75rem; font-family:var(--font-mono);" id="alpha-move-num">0</span>
+            <input type="range" class="scrub-slider" id="alpha-scrubber" min="0" max="60" value="0">
+            <span style="font-size:0.75rem; font-family:var(--font-mono);" id="alpha-total-moves">60</span>
+          </div>
+
+          <!-- Commentary Box for AlphaGo -->
+          <div class="commentary-ticker">
+            <div class="commentary-header">
+              <span>Historical Commentary</span>
+              <button class="btn-icon" id="btn-deep-dive-modal" style="padding:2px 8px; font-size:0.7rem; color:var(--accent-gold); border-color:var(--accent-gold);">
+                📖 Move 37 Lore
+              </button>
+            </div>
+            <p class="commentary-body" id="alpha-commentary-text">
+              Select a match or click "Jump to Move 37" to relive the historic encounter that changed Go forever.
+            </p>
+          </div>
+        </div>
+      </div>
+
+    </aside>
+  </main>
+
+  <!-- ========================================================================
+       MODAL 1: MOVE 37 DEEP DIVE MODAL
+       ======================================================================== -->
+  <div class="modal-backdrop" id="modal-move-37">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title">🌟 The Legend of Move 37</h2>
+        <button class="modal-close-btn" data-close="modal-move-37">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p><strong>AlphaGo vs. Lee Sedol — Game 2, Move 37 (March 10, 2016)</strong></p>
+        <p>At <strong>P10</strong> on the 19x19 board, AlphaGo played a move that sent shockwaves across the globe and forever altered our understanding of artificial intelligence and game theory.</p>
+        <ul>
+          <li><strong>Breaking 2,500 Years of Dogma:</strong> In classical Go, playing a shoulder hit on the 5th line was considered unthinkable. Human dogma dictated that you only play shoulder hits on the 3rd or 4th lines—playing on the 5th line pushes the opponent along the 4th line, conceding massive, uncontested territory on the side.</li>
+          <li><strong>The 1-in-10,000 Probability:</strong> Fan Hui and the DeepMind research team analyzed AlphaGo's neural networks after the match. AlphaGo calculated that a human professional would choose this move only <strong>1 time in 10,000 (0.01%)</strong>. Yet its value network evaluated that this move gave it the highest winning probability.</li>
+          <li><strong>Lee Sedol's 15-Minute Walkout:</strong> Lee Sedol froze in astonishment. Unable to fathom what he had just seen, he stood up, left the room into the hotel corridor, and spent nearly 15 minutes regaining composure before playing Move 38.</li>
+          <li><strong>Cosmic Thickness:</strong> AlphaGo gave away fourth-line side territory to weave a majestic diagonal highway of stones through the center, linking disparate groups into an unassailable sphere of cosmic influence.</li>
+          <li><strong>True AI Creativity:</strong> Move 37 proved that deep neural networks were not merely memorizing human knowledge—they had transcended human blind spots to reveal sublime beauty.</li>
+        </ul>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-primary-modal" data-close="modal-move-37">Close & Explore on Board</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       MODAL 2: MOVE 78 DEEP DIVE (THE DIVINE MOVE)
+       ======================================================================== -->
+  <div class="modal-backdrop" id="modal-move-78">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title">✨ Move 78: "The Divine Move" (God's Touch)</h2>
+        <button class="modal-close-btn" data-close="modal-move-78">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p><strong>Lee Sedol vs. AlphaGo — Game 4, Move 78 (March 13, 2016)</strong></p>
+        <p>Down 0-3 in the match and facing seemingly insurmountable despair, legendary 9-dan Lee Sedol produced humanity's greatest tactical triumph.</p>
+        <ul>
+          <li><strong>The Wedge into the Void:</strong> Lee Sedol struck at <strong>K10</strong>, wedging a white stone directly between AlphaGo's two impenetrable center walls.</li>
+          <li><strong>AlphaGo's Blind Spot:</strong> AlphaGo calculated that the probability of a human finding this exact move was under <strong>0.007%</strong>. Because its Monte Carlo tree search pruned branches it deemed virtually impossible, it was unprepared for the complex tactical ripple effects.</li>
+          <li><strong>The Hallucination Cascade:</strong> AlphaGo's win-rate curve plummeted from 70% to under 20% within several moves, leading to erratic play and Lee Sedol's unforgettable victory for humanity.</li>
+        </ul>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-primary-modal" data-close="modal-move-78">Close & Explore on Board</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       MODAL 3: ORIGINAL PROMPT MODAL
+       ======================================================================== -->
+  <div class="modal-backdrop" id="modal-prompt">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title">✨ Original Prompt</h2>
+        <button class="modal-close-btn" data-close="modal-prompt">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="background:var(--bg-tertiary); padding:16px; border-radius:10px; font-family:var(--font-mono); font-size:0.85rem; line-height:1.6; white-space:pre-wrap;">
+create beautiful Go game board that you can toggle various views with black background with various game modes:
+
+1. Learing Go - 3 levels with comments giving hints (text box user can toggle on and off) on good, ok and bad moves, giving user advise on next move, what to watch out for, what to do, what not to do 
+2. Having AI play AI - and watching where user can set the game speed. User can toggle on/off explainer text on each move
+3. AlphaGo - user can relive the game series in 2016 and 2017 (user chooses year and the game number) and can watch the game play with commentary, but user can also toggle to manually move the game forward, e.g. to Move 37. Move 37 should have a longer explainer text on why that move was so incredible and how that move influenced the game outcome 
+
+can we have cool animation with sound whenever stones are captured, e.g. stones dissolve into air or explode or go up in flames . 
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-primary-modal" data-close="modal-prompt">Dismiss</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       MODAL 4: GOOGLER DEMO GUIDE MODAL
+       ======================================================================== -->
+  <div class="modal-backdrop" id="modal-guide">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title">📖 Googler Demo Guide</h2>
+        <button class="modal-close-btn" data-close="modal-guide">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p><strong>30-Second Elevator Pitch:</strong></p>
+        <p>Move 37 is a high-fidelity, interactive Go (Baduk) showcase honoring DeepMind's seminal triumph. It combines luxury 2D and 2.5D perspective rendering on an obsidian black canvas, a 3-tier tactical learning coach, autonomous AI vs AI self-play with speed controls, particle capture physics (dissolve, explode, flames), and full interactive SGF replay of the 2016 and 2017 AlphaGo match series.</p>
+
+        <p><strong>Key "Aha! Moments" to Showcase:</strong></p>
+        <ul>
+          <li><strong>The Move 37 Spotlight:</strong> Click <em>"AlphaGo Relive"</em> then hit <em>"🌟 Jump to Move 37"</em>. Watch the camera zero in on P10 with a golden beacon and read how AlphaGo broke 2,500 years of Go dogma.</li>
+          <li><strong>2.5D Tilt Perspective & Heatmaps:</strong> Toggle the <em>"2.5D Tilt"</em> button to see the physical wood bevel and stone drop shadows, then toggle <em>"Influence Map"</em> to see real-time territorial force fields.</li>
+          <li><strong>Particle Captures & Audio Juice:</strong> Switch capture VFX to <em>"Inferno Flames"</em> or <em>"Supernova Explode"</em>. Place a stone to capture an opponent group and experience procedural Web Audio API stone clacks and particle disintegration.</li>
+          <li><strong>Interactive Learning Coach:</strong> Switch to <em>"Learning Go"</em>, hover and click. Notice how the AI coach dynamically rates moves as <em>"Great"</em>, <em>"Solid"</em>, or <em>"Blunder"</em> while giving tactical advice on atari and liberties.</li>
+        </ul>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-primary-modal" data-close="modal-guide">Got It</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       MODAL 5: ONGOING GAME WARNING MODAL
+       ======================================================================== -->
+  <div class="modal-backdrop" id="modal-ongoing-game">
+    <div class="modal-content" style="max-width: 520px;">
+      <div class="modal-header">
+        <h2 class="modal-title">⚠️ Game in Progress</h2>
+        <button class="modal-close-btn" data-close="modal-ongoing-game">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p id="ongoing-game-desc" style="font-size: 0.95rem; line-height: 1.5; margin-bottom: 12px;">
+          You have an active game in progress at <strong>Move <span id="ongoing-game-move-num">1</span></strong>.
+          Switching modes in this window will reset your board.
+        </p>
+        <p style="color: var(--text-secondary); font-size: 0.85rem; line-height: 1.5;">
+          💡 <em>Tip:</em> To preserve your ongoing game, open the other mode in a new browser tab.
+        </p>
+      </div>
+      <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap; align-items:center;">
+        <button class="btn-action" id="btn-modal-cancel" data-close="modal-ongoing-game" style="padding: 8px 16px; border-radius: 8px;">Keep Playing</button>
+        <button class="btn-restart-red" id="btn-modal-discard" style="padding: 8px 16px; font-size: 0.85rem;">🔄 Discard & Switch</button>
+        <button class="btn-primary-modal" id="btn-modal-new-tab" style="padding: 8px 18px; font-size: 0.85rem;">↗️ Open in New Tab</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main JavaScript App -->
+  <script type="module" src="app.js?v=1.2.1"></script>
+</body>
+</html>

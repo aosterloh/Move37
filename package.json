@@ -1,0 +1,22 @@
+{
+  "name": "move37-go-showcase",
+  "version": "1.0.0",
+  "description": "Exquisite Go game board with multiple views, Learning Coach, AI vs AI, AlphaGo historical matches (Move 37 & Move 78), and particle capture VFX.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [
+    "go",
+    "baduk",
+    "weiqi",
+    "alphago",
+    "move37",
+    "deepmind"
+  ],
+  "author": "Google DeepMind Demo Showcase",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "ws": "^8.22.0"
+  }
+}
