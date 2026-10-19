@@ -1,0 +1,7 @@
+#!include:.gitignore
+.gcloudignore
+.git
+.env
+.env.*
+node_modules
+.firebase
